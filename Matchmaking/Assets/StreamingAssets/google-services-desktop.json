@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "689592938695",
+    "firebase_url": "https://matchmaking-t1-default-rtdb.firebaseio.com",
+    "project_id": "matchmaking-t1",
+    "storage_bucket": "matchmaking-t1.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:689592938695:android:a0a44296918791b6e94ee2",
+        "android_client_info": {
+          "package_name": "com.T1.Matchmaking"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHbDYwWVzpFVQwNKmA5kpuq9Dom2s9cSY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

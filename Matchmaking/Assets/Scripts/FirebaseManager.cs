@@ -10,13 +10,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.VisualScripting;
 
-public class FireBase_Interactions : MonoBehaviour
+public class FirebaseManager : MonoBehaviour
 {
-    [SerializeField] private TMP_InputField Email_TXT,Username_TXT,Password_TXT;
+    public static FirebaseManager Instance { get; private set; } = null;
+
+    [SerializeField] private TMP_InputField tMPEmail, tMPUsername, tMPPassword;
+    [HideInInspector] public User currentUser;
+
+    public Dictionary<string,string> usersOnline = new Dictionary<string, string>();
     private DatabaseReference database;
-    public User currentUser;
-    public static FireBase_Interactions Instance {get;private set;} = null;
-    public Dictionary<string,string> Users_Online = new Dictionary<string, string>();
 
     void Awake()
     {
@@ -42,7 +44,7 @@ public class FireBase_Interactions : MonoBehaviour
             int scene = SceneManager.GetActiveScene().buildIndex;
             if(scene != 1)
             {
-                Load_Sceen(1);
+                LoadScene(1);
             }
             else
             {
@@ -56,16 +58,18 @@ public class FireBase_Interactions : MonoBehaviour
             
         }
     }
+
     public void Sing_Up()
     {
-        string user_Email = Email_TXT.text;
-        string user_Password = Password_TXT.text;
+        string user_Email = tMPEmail.text;
+        string user_Password = tMPPassword.text;
         StartCoroutine(RegisterUser(user_Email,user_Password));
-    } 
+    }
+    
     public void Log_In()
     {
         var auth = FirebaseAuth.DefaultInstance;
-        auth.SignInWithEmailAndPasswordAsync(Email_TXT.text, Password_TXT.text).ContinueWith(task => {
+        auth.SignInWithEmailAndPasswordAsync(tMPEmail.text, tMPPassword.text).ContinueWith(task => {
             if (task.IsCanceled)
             {
                 Debug.LogError("Sign In With Email And Password Async was canceled.");
@@ -91,9 +95,9 @@ public class FireBase_Interactions : MonoBehaviour
                 }
                 else if (task.IsCompleted)
                 {
-                    currentUser.user_Username = (string) task.Result.Value;
-                    FirebaseDatabase.DefaultInstance.RootReference.Child("users-online").Child(currentUser.userID).SetValueAsync(currentUser.user_Username);
-                    UI_Manager.Instance.Update_User_Info(currentUser.user_Username);
+                    currentUser.userUsername = (string)task.Result.Value;
+                    FirebaseDatabase.DefaultInstance.RootReference.Child("users-online").Child(currentUser.userID).SetValueAsync(currentUser.userUsername);
+                    UIManager.Instance.Update_User_Info(currentUser.userUsername);
                     Get_Friends();
                 }
             });
@@ -102,19 +106,19 @@ public class FireBase_Interactions : MonoBehaviour
     {
         FirebaseDatabase.DefaultInstance.RootReference.Child("users-online").Child(currentUser.userID).RemoveValueAsync();
         currentUser.userID = null;
-        PlayerPrefs.SetString(nameof(currentUser.user_Username),string.Empty);
+        PlayerPrefs.SetString(nameof(currentUser.userUsername),string.Empty);
         PlayerPrefs.SetString(nameof(currentUser.userID),string.Empty);
         FirebaseAuth.DefaultInstance.SignOut();
-        Load_Sceen(0);
+        LoadScene(0);
     }
-    public void Load_Sceen(int i)
+    public void LoadScene(int i)
     {
         SceneManager.LoadScene(i);
     }
     public void Reset_Password()
     {
-        string email = Email_TXT.text;
-        StartCoroutine(Restor_Password(email));
+        string email = tMPEmail.text;
+        StartCoroutine(RestorePassword(email));
     }
     private void Get_Friends()
     {
@@ -132,7 +136,7 @@ public class FireBase_Interactions : MonoBehaviour
 
                     foreach(var userFriend in (Dictionary<string,object>) snapshot.Value)
                     {
-                        currentUser.user_Firends.Add(userFriend.Key,(string)userFriend.Value);
+                        currentUser.userFriends.Add(userFriend.Key,(string)userFriend.Value);
                     }
 
                     var databaseRef = FirebaseDatabase.DefaultInstance.GetReference("users-online");
@@ -147,7 +151,7 @@ public class FireBase_Interactions : MonoBehaviour
                 }
             });
     }
-    private IEnumerator Restor_Password(string email)
+    private IEnumerator RestorePassword(string email)
     {
         var auth = FirebaseAuth.DefaultInstance;
         var resetTask = auth.SendPasswordResetEmailAsync(email);
@@ -185,11 +189,11 @@ public class FireBase_Interactions : MonoBehaviour
         else
         {
             AuthResult result = registerTask.Result;
-            string name = Username_TXT.text;
+            string name = tMPUsername.text;
             User user = new User();
-            user.user_Firends.Add(result.User.UserId,name);
+            user.userFriends.Add(result.User.UserId,name);
             database.Child("users").Child(result.User.UserId).Child("username").SetValueAsync(name);
-            database.Child("users").Child(result.User.UserId).Child("friends").SetValueAsync(user.user_Firends);
+            database.Child("users").Child(result.User.UserId).Child("friends").SetValueAsync(user.userFriends);
         }
     }
     private void OnDestroy()
@@ -209,10 +213,11 @@ public class FireBase_Interactions : MonoBehaviour
     {   
         if(args.Snapshot.Key != currentUser.userID)
         {
-            Users_Online.Add(args.Snapshot.Key,(string)args.Snapshot.Value);
-            UI_Manager.Instance.Update_Users(args.Snapshot.Key,(string)args.Snapshot.Value, currentUser.user_Firends.ContainsKey(args.Snapshot.Key));  
+            usersOnline.Add(args.Snapshot.Key,(string)args.Snapshot.Value);
+            UIManager.Instance.Update_Users(args.Snapshot.Key,(string)args.Snapshot.Value, currentUser.userFriends.ContainsKey(args.Snapshot.Key));  
         }
     }
+
     void HandleChildRemoved(object sender, ChildChangedEventArgs args)
     {
         if (args.DatabaseError != null)
@@ -220,17 +225,18 @@ public class FireBase_Interactions : MonoBehaviour
             Debug.LogError(args.DatabaseError.Message);
             return;
         }
-        Users_Online.Remove(args.Snapshot.Key);
-        UI_Manager.Instance.Remove_User(args.Snapshot.Key,(string)args.Snapshot.Value); 
+        usersOnline.Remove(args.Snapshot.Key);
+        UIManager.Instance.Remove_User(args.Snapshot.Key,(string)args.Snapshot.Value); 
     }
+
     void HandleChildAdded_Friend(object sender, ChildChangedEventArgs args)
     {
         if(args.Snapshot.Key == currentUser.userID)
         {
             var user = (Dictionary<string,object>) args.Snapshot.Value;
-            var user_ID = user.Keys.ToArray();
-            var user_Username = user.Values.ToArray();
-            UI_Manager.Instance.Notification_Receved(user_ID[0],(string)user_Username[0]);
+            var userID = user.Keys.ToArray();
+            var userUsername = user.Values.ToArray();
+            UIManager.Instance.Notification_Receved(userID[0],(string)userUsername[0]);
         }        
     }
 
@@ -241,26 +247,26 @@ public class FireBase_Interactions : MonoBehaviour
         if(args.Snapshot.Key == currentUser.userID)
         {
             var user = (Dictionary<string,object>) args.Snapshot.Value;
-            var user_ID = user.Keys.ToArray();
-            var user_Username = user.Values.ToArray();
-            Request_Acepted(user_ID[0],(string)user_Username[0]);
+            var userID = user.Keys.ToArray();
+            var userUsername = user.Values.ToArray();
+            Request_Acepted(userID[0],(string)userUsername[0]);
         }        
     }
 
     public void Acept_Request(string ID, string username)
     {
-        currentUser.user_Firends.Add(ID,username);
-        if(Users_Online.ContainsKey(ID)) UI_Manager.Instance.Update_Users(ID,username,true);
-        database.Child("users").Child(currentUser.userID).Child("friends").SetValueAsync(currentUser.user_Firends);
+        currentUser.userFriends.Add(ID,username);
+        if(usersOnline.ContainsKey(ID)) UIManager.Instance.Update_Users(ID,username,true);
+        database.Child("users").Child(currentUser.userID).Child("friends").SetValueAsync(currentUser.userFriends);
         database.Child("request").Child(currentUser.userID).RemoveValueAsync();
-        database.Child("accepted").Child(ID).Child(currentUser.userID).SetValueAsync(currentUser.user_Username);
+        database.Child("accepted").Child(ID).Child(currentUser.userID).SetValueAsync(currentUser.userUsername);
     }
 
     public void Request_Acepted(string ID, string username)
     {
-        currentUser.user_Firends.Add(ID,username);
-        if(Users_Online.ContainsKey(ID)) UI_Manager.Instance.Update_Users(ID,username,true);
-        database.Child("users").Child(currentUser.userID).Child("friends").SetValueAsync(currentUser.user_Firends);
+        currentUser.userFriends.Add(ID,username);
+        if(usersOnline.ContainsKey(ID)) UIManager.Instance.Update_Users(ID,username,true);
+        database.Child("users").Child(currentUser.userID).Child("friends").SetValueAsync(currentUser.userFriends);
         database.Child("accepted").Child(currentUser.userID).RemoveValueAsync();
     }
 
@@ -269,10 +275,10 @@ public class FireBase_Interactions : MonoBehaviour
         database.Child("request").Child(currentUser.userID).RemoveValueAsync();
     }
 
-    public void Send_Frend_Request(string user_ID)
+    public void SendFriendRequest(string userID)
     {
-        database.Child("request").Child(user_ID).Child(currentUser.userID).SetValueAsync(currentUser.user_Username);
-        UI_Manager.Instance.Notification_Send_Activation();
+        database.Child("request").Child(userID).Child(currentUser.userID).SetValueAsync(currentUser.userUsername);
+        UIManager.Instance.Notification_Send_Activation();
     }
 }
 
@@ -280,11 +286,11 @@ public class FireBase_Interactions : MonoBehaviour
 public class User
 {
     public string userID;
-    public string user_Username;
-    public Dictionary<string, string> user_Firends;
+    public string userUsername;
+    public Dictionary<string, string> userFriends;
 
     public User()
     {
-        user_Firends = new Dictionary<string, string>();
+        userFriends = new Dictionary<string, string>();
     }
 }

@@ -4,23 +4,23 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class User_Data_Structure : MonoBehaviour
+public class UIUserData : MonoBehaviour
 {
     public Image image;
     public TextMeshProUGUI txt;
     public Button button;
     public int index;
-    public bool In_Use;
+    public bool inUse;
     public bool friend;
     public string id;
 
     void Start()
     {
-        button.onClick.AddListener(sendRequest);
+        button.onClick.AddListener(SendRequest);
     }
 
-    public void sendRequest()
+    public void SendRequest()
     {
-        FireBase_Interactions.Instance.Send_Frend_Request(id);
+        FirebaseManager.Instance.SendFriendRequest(id);
     }
 }

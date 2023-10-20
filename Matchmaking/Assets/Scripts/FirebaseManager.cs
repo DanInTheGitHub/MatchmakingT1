@@ -8,7 +8,6 @@ using UnityEngine.SceneManagement;
 using Firebase.Extensions;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 
 public class FirebaseManager : MonoBehaviour
 {
@@ -102,6 +101,8 @@ public class FirebaseManager : MonoBehaviour
                 }
             });
     }
+
+  
     public void Log_Out()
     {
         FirebaseDatabase.DefaultInstance.RootReference.Child("users-online").Child(currentUser.userID).RemoveValueAsync();
@@ -209,6 +210,7 @@ public class FirebaseManager : MonoBehaviour
         }
         
     }
+
     void HandleChildAdded(object sender, ChildChangedEventArgs args)
     {   
         if(args.Snapshot.Key != currentUser.userID)
@@ -280,6 +282,13 @@ public class FirebaseManager : MonoBehaviour
         database.Child("request").Child(userID).Child(currentUser.userID).SetValueAsync(currentUser.userUsername);
         UIManager.Instance.Notification_Send_Activation();
     }
+    public void InitMatchmaking()
+    {
+        database.Child("matchmaking").Child(currentUser.userID).SetValueAsync(currentUser.userUsername);
+        
+        Instance.LoadScene(2);
+    }
+
 }
 
 [System.Serializable]

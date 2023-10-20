@@ -107,7 +107,7 @@ public class UIManager : MonoBehaviour
                 user.id = ID;
                 user.inUse = true;
                 user.friend = friend;
-                if(friend)user.image.color = Color.green;
+                user.image.color = friend ? Color.green : Color.white;
                 break;
             }
         }

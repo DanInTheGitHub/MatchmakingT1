@@ -113,7 +113,7 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    public void Remove_User(string ID, string username)
+    public void Remove_User(string ID)
     {
         foreach(UIUserData user in usersList)
         {

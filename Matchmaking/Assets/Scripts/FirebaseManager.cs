@@ -24,10 +24,13 @@ public class FirebaseManager : MonoBehaviour
         if(Instance != null)
         {
             Destroy(gameObject);
-            return;
-        }
 
-        Instance = this;
+        }
+        else
+        {
+
+            Instance = this;
+        }
     }
 
     void Start()
@@ -201,6 +204,7 @@ public class FirebaseManager : MonoBehaviour
     {
         FirebaseAuth.DefaultInstance.StateChanged -= Check_Login;
     }
+
     private void OnApplicationQuit()
     { 
         if(currentUser.userID != null)
@@ -228,7 +232,7 @@ public class FirebaseManager : MonoBehaviour
             return;
         }
         usersOnline.Remove(args.Snapshot.Key);
-        UIManager.Instance.Remove_User(args.Snapshot.Key,(string)args.Snapshot.Value); 
+        UIManager.Instance.Remove_User(args.Snapshot.Key); 
     }
 
     void HandleChildAdded_Friend(object sender, ChildChangedEventArgs args)

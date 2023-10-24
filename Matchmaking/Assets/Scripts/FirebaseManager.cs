@@ -221,7 +221,8 @@ public class FirebaseManager : MonoBehaviour
         if(args.Snapshot.Key != currentUser.userID)
         {
             usersOnline.Add(args.Snapshot.Key,(string)args.Snapshot.Value);
-            UIManager.Instance.Update_Users(args.Snapshot.Key,(string)args.Snapshot.Value, currentUser.userFriends.ContainsKey(args.Snapshot.Key));  
+            UIManager.Instance.Update_Users(args.Snapshot.Key,(string)args.Snapshot.Value, currentUser.userFriends.ContainsKey(args.Snapshot.Key));
+            if(currentUser.userFriends.ContainsKey(args.Snapshot.Key)) UIManager.Instance.Set_Friend_Panel((string)args.Snapshot.Value);
         }
     }
 

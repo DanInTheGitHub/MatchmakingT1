@@ -18,8 +18,18 @@ public class RoomManager : MonoBehaviour
     public Dictionary<string, string> usersInRoom = new Dictionary<string, string>();
     private DatabaseReference database;
     
+    public static RoomManager Instance {get; private set;} = null;
+
     void Awake()
     { 
+        if(Instance != null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+
         foreach (var userUI in uIUsers)
             userUI.gameObject.SetActive(false);
         database = FirebaseDatabase.DefaultInstance.RootReference;
@@ -38,7 +48,7 @@ public class RoomManager : MonoBehaviour
             GetUser_Username();
         }
     }
-    
+
     public void GetUser_Username()
     {
         FirebaseDatabase.DefaultInstance

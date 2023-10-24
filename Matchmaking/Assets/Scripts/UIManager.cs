@@ -9,8 +9,8 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; private set; } = null;
 
-    public GameObject friendsPanel, notificationSend, notificationRecived;
-    public TextMeshProUGUI tMPNotification, tMPUserData;
+    public GameObject friendsPanel, notificationSend, notificationRecived, notificationfirned;
+    public TextMeshProUGUI tMPNotification, tMPUserData, tmpFriend;
     public UIUserData[] usersList;
     List<Vector3> positions = new List<Vector3>();
 
@@ -87,6 +87,7 @@ public class UIManager : MonoBehaviour
             {
                 user.friend = friend;
                 if(friend)user.image.color = Color.green;
+                user.button.gameObject.SetActive(!friend);
                 break;
             }
 
@@ -97,6 +98,7 @@ public class UIManager : MonoBehaviour
                 user.inUse = true;
                 user.friend = friend;
                 user.image.color = friend ? Color.green : Color.white;
+                user.button.gameObject.SetActive(!friend);
                 break;
             }
         }
@@ -124,6 +126,25 @@ public class UIManager : MonoBehaviour
         {
             notificationSend.SetActive(true);
             Invoke(nameof(Notification_Send_Activation),3);
+        }
+    }
+
+    public void Set_Friend_Panel(string f)
+    {
+        tmpFriend.text = f + " se ha conectado";
+        Notification_Friend_Activation();
+    }
+
+    public void Notification_Friend_Activation()
+    {
+        if(notificationfirned.activeInHierarchy)
+        {
+            notificationfirned.SetActive(false);
+        }
+        else
+        {
+            notificationfirned.SetActive(true);
+            Invoke(nameof(Notification_Friend_Activation),3);
         }
     }
 

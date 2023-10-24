@@ -40,11 +40,7 @@ public class UIManager : MonoBehaviour
                 if(i+1 < usersList.Length)
                 {
                     if(usersList[i+1].inUse)
-                    {
-                        var j = usersList[i+1];
-                        usersList[i+1] = usersList[i];
-                        usersList[i] = j;
-                    }
+                        (usersList[i+1], usersList[i]) = (usersList[i], usersList[i+1]);
                 }
 
                 continue;
@@ -56,16 +52,9 @@ public class UIManager : MonoBehaviour
                 if(i+1 < usersList.Length)
                 {
                     if(usersList[i+1].friend && usersList[i+1].inUse && !usersList[i].friend)
-                    {
-                        var j = usersList[i+1];
-                        usersList[i+1] = usersList[i];
-                        usersList[i] = j;
-                    }
+                        (usersList[i+1], usersList[i]) = (usersList[i], usersList[i+1]);
                 }
             }
-
-            
-
             usersList[i].GetComponent<RectTransform>().localPosition = positions[i];
             //last_index = users[i].index;
         }

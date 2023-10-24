@@ -9,6 +9,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 public class MatchmakingManager : MonoBehaviour
 {
@@ -20,8 +21,8 @@ public class MatchmakingManager : MonoBehaviour
     [SerializeField] TMP_Text tMPCounter;
     [HideInInspector] public User currentUser;
     private float time = 0, timeToCancelMatch = 120f;
-    private int counter; 
-    private Queue queue = new Queue();
+    private int counter;
+    [SerializeField] private Button startRoom, cancelMatch;
     
     [SerializeField] private List<UIUserData> uIUsers = new List<UIUserData>();
     public Dictionary<string, string> usersInMatchmaking = new Dictionary<string, string>();
@@ -33,37 +34,54 @@ public class MatchmakingManager : MonoBehaviour
         {
             Instance = this;
         }
-
-        database = FirebaseDatabase.DefaultInstance.RootReference;
-
-        FirebaseDatabase.DefaultInstance.GetReference("users/" + currentUser.userID + "/username").GetValueAsync().ContinueWithOnMainThread(task =>
-        {
-            if (task.IsFaulted)
-            {
-                Debug.Log(task.Exception);
-            }
-            else if (task.IsCompleted)
-            {
-                currentUser.userUsername = (string)task.Result.Value;
-                database.Child("matchmaking").Child(currentUser.userID).SetValueAsync(currentUser.userUsername);
-                GetFriends();
-            }
-        });
-        
-    }
-
-    private void Start()
-    {
         foreach (var userUI in uIUsers)
             userUI.gameObject.SetActive(false);
+        
+        startRoom.gameObject.SetActive(false);
+        startRoom.onClick.AddListener(CreateRoom);
+        cancelMatch.onClick.AddListener(CancelMatchmaking);
+        database = FirebaseDatabase.DefaultInstance.RootReference;
+        FirebaseAuth.DefaultInstance.StateChanged += Check_Login;
     }
+    
+    private void Check_Login(object sender, EventArgs e)
+    {
+        if (FirebaseAuth.DefaultInstance.CurrentUser != null)
+        {
+            currentUser = new User
+            {
+                userID = FirebaseAuth.DefaultInstance.CurrentUser.UserId
+            };
+            GetUser_Username();
+        }
+    }
+    
+    public void GetUser_Username()
+    {
+        FirebaseDatabase.DefaultInstance
+            .GetReference("users/" + currentUser.userID + "/username")
+            .GetValueAsync().ContinueWithOnMainThread(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    Debug.Log(task.Exception);
+                }
+                else if (task.IsCompleted)
+                {
+                    currentUser.userUsername = (string)task.Result.Value;
+                    FirebaseDatabase.DefaultInstance.RootReference.Child("matchmaking").Child(currentUser.userID).SetValueAsync(currentUser.userUsername);
+                    GetFriends();
+                }
+            });
+    }
+    
 
     private void Update()
     {
         switch (currentState)
         {
             case MatchmakingState.Init:
-                currentState = queue.Peek().IsUnityNull() ? MatchmakingState.Init : MatchmakingState.Search;
+                currentState = usersInMatchmaking.Count > 0 ? MatchmakingState.Init : MatchmakingState.Search;
                 break;
             case MatchmakingState.Search:
 
@@ -72,15 +90,17 @@ public class MatchmakingManager : MonoBehaviour
                 tMPCounter.text = counter.ToString();
                 if (time >= timeToCancelMatch)
                 {
-                    if (queue.Count > 1)
-                    {
-                        
-                        //Crear sala si se acaba el tiempo de la sala
-                    }
+                    if (usersInMatchmaking.Count > 1)
+                        CreateRoom();
                     else
-                    {
                         currentState = MatchmakingState.Expired;
-                    }
+                }
+                else
+                {
+                    if (usersInMatchmaking.Count > 1)
+                        startRoom.gameObject.SetActive(true);
+                    else
+                        startRoom.gameObject.SetActive(false);
                 }
 
                 break;
@@ -116,7 +136,7 @@ public class MatchmakingManager : MonoBehaviour
                 
                 var dataReference = FirebaseDatabase.DefaultInstance.GetReference("matchmaking");
                 dataReference.ChildAdded += HandleChildAddMatchmaking;
-                dataReference.ChildAdded += HandleChildRemoveMatchmaking;
+                dataReference.ChildRemoved += HandleChildRemoveMatchmaking;
             }
         });
 
@@ -124,10 +144,16 @@ public class MatchmakingManager : MonoBehaviour
 
     private void HandleChildRemoveMatchmaking(object sender, ChildChangedEventArgs args)
     {
-        if (args.Snapshot.Key != currentUser.userID)
+        foreach (var uIUser in uIUsers)
         {
-            
+            if (uIUser.txt.text == (string)args.Snapshot.Value)
+            {
+                uIUser.txt.text = "";
+                uIUser.gameObject.SetActive(false);
+                usersInMatchmaking.Remove(args.Snapshot.Key);
+            }
         }
+        
     }
 
     private void HandleChildAddMatchmaking(object sender, ChildChangedEventArgs args)
@@ -135,18 +161,25 @@ public class MatchmakingManager : MonoBehaviour
         if (args.Snapshot.Key != currentUser.userID)
         {
             usersInMatchmaking.Add(args.Snapshot.Key,(string)args.Snapshot.Value);
-            
-            
-            //ya se puede crear la sala
+            uIUsers[usersInMatchmaking.Count-1].txt.text = (string)args.Snapshot.Value;
+            uIUsers[usersInMatchmaking.Count-1].button.gameObject.SetActive(true);
+            uIUsers[usersInMatchmaking.Count-1].gameObject.SetActive(true);
         }
     }
 
+    public void CreateRoom()
+    {
+        foreach (var key in usersInMatchmaking)
+            database.Child("room01").Child(key.Key).SetValueAsync(key.Value);
+        database.Child("matchmaking").RemoveValueAsync();
+        usersInMatchmaking.Clear();
+        SceneManager.LoadScene(3);
+    }
+    
     private void CancelMatchmaking()
     {
-        database.Child("matchmaking").RemoveValueAsync();
-        FirebaseManager.Instance.LoadScene(1);
+        database.Child("matchmaking").Child(currentUser.userID).RemoveValueAsync();
+        usersInMatchmaking.Remove(currentUser.userID);
+        SceneManager.LoadScene(1);
     }
-
-
-
 }

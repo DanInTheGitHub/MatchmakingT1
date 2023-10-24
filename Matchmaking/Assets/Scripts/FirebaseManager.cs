@@ -119,6 +119,7 @@ public class FirebaseManager : MonoBehaviour
     {
         SceneManager.LoadScene(i);
     }
+    
     public void Reset_Password()
     {
         string email = tMPEmail.text;
